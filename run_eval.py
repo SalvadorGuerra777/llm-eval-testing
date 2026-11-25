@@ -9,6 +9,7 @@ threshold is missed, so it can gate a pipeline.
 
 import argparse
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -81,6 +82,14 @@ def main(argv=None):
     REPORT.write_text(json.dumps({"model": MODEL, "pass_rates": rates, "cases": rows},
                                  indent=2, ensure_ascii=False), encoding="utf-8")
     print(f"\nmodel {MODEL}, {len(rows)} cases, report: {REPORT.relative_to(ROOT)}")
+    if os.getenv("GITHUB_ACTIONS"):
+        # annotations show on the public run page; job logs need a sign-in
+        summary = [f"{name} {rate:.0%}" for name, rate in rates.items()]
+        summary += [f"FAIL {row['id']}: " + "; ".join(r for ok, r in row["grades"].values() if not ok)
+                    for row in rows if not all(ok for ok, _ in row["grades"].values())]
+        # workflow commands need % escaped before %0A is used as the line break
+        print(f"::notice title=Eval {MODEL}, {len(rows)} cases::"
+              + "%0A".join(line.replace("%", "%25") for line in summary))
     return 1 if missed else 0
 
 
