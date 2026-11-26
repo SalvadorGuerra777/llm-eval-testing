@@ -94,4 +94,10 @@ def main(argv=None):
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    try:
+        sys.exit(main())
+    except Exception as e:
+        # API errors (auth, credit, bad request) stop the run before any summary is printed
+        if os.getenv("GITHUB_ACTIONS"):
+            print(f"::error title={type(e).__name__}::{str(e)[:500].replace('%', '%25')}")
+        raise
